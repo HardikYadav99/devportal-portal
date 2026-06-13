@@ -1,0 +1,44 @@
+name: Ingest User Repository
+
+on:
+workflow_dispatch:
+inputs:
+repo_url:
+description: "GitHub repository URL"
+required: true
+type: string
+
+jobs:
+ingest-repository:
+runs-on: ubuntu-latest
+
+
+steps:
+  - name: Clone user repository
+    run: |
+      git clone ${{ github.event.inputs.repo_url }} user-app
+
+  - name: Clone devportal-gitops repository
+    run: |
+      git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/HardikYadav99/devportal-gitops.git
+
+  - name: Remove old sample-app contents
+    run: |
+      rm -rf devportal-gitops/sample-app/*
+
+  - name: Copy new app into sample-app
+    run: |
+      cp -r user-app/* devportal-gitops/sample-app/
+
+  - name: Commit and push updated sample-app
+    run: |
+      cd devportal-gitops
+
+      git config user.name "github-actions"
+      git config user.email "github-actions@github.com"
+
+      git add .
+
+      git commit -m "Automated sample-app update" || echo "No changes to commit"
+
+      git push
