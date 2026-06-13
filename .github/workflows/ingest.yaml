@@ -23,19 +23,17 @@ jobs:
       - name: Remove old sample-app contents
         run: |
           rm -rf devportal-gitops/sample-app/*
-          # Optional: Remove hidden files too if they exist
-          rm -rf devportal-gitops/sample-app/.[!.]* - name: Copy new app into sample-app
+          rm -rf devportal-gitops/sample-app/.[!.]*
+
+      - name: Copy new app into sample-app
         run: |
-          # Using '.' instead of '*' ensures hidden files are copied over too
+          rm -rf user-app/.git
           cp -r user-app/. devportal-gitops/sample-app/
-          
-          # Remove the nested .git folder so it doesn't cause submodule issues
-          rm -rf devportal-gitops/sample-app/.git
 
       - name: Commit and push updated sample-app
         run: |
           cd devportal-gitops
-
+          
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
