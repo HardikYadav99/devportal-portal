@@ -12,6 +12,7 @@ jobs:
 ingest-repository:
 runs-on: ubuntu-latest
 
+```
 steps:
   - name: Clone user repository
     run: |
@@ -41,3 +42,4 @@ steps:
       git commit -m "Automated sample-app update" || echo "No changes to commit"
 
       git push
+```
