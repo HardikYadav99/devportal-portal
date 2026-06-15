@@ -4,9 +4,12 @@ function App() {
 
   const [repoUrl, setRepoUrl] = useState("");
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleDeploy = async() => {
     
+    setLoading(true);
+
     const response = await fetch ("http://localhost:5050/deploy", {
       method: "POST",
       headers: {
@@ -20,6 +23,8 @@ function App() {
     const data = await response.json();
 
     setMessage(data.message);
+
+    setLoading(false);
   };
 
   return (
@@ -32,8 +37,8 @@ function App() {
       value={repoUrl}
       onChange={(e) => setRepoUrl(e.target.value)}
       />
-      <button onClick={handleDeploy}>
-      Deploy
+      <button onClick={handleDeploy} disabled={loading}>
+      {loading ? "Deploying..." : "Deploy"}
       <p>{message}</p>
       </button>
     </div>
