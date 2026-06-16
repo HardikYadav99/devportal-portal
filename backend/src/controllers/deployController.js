@@ -1,12 +1,20 @@
 
 
+const {
+     validateGithubRepo,
+     validateDockerfile
+    } = require("../services/githubValidationService");
 
 const { triggerGithubWorkflow } = require("../services/githubService");
 
 const deployRepo = async (req, res) => {
 
     const repoUrl = req.body.repoUrl;
-    console.log("Deployment Request Recieved for:", repoUrl);
+
+    
+
+    console.log("\nDeployment Request Recieved for:",)
+    console.log(repoUrl);
 
     if(!repoUrl.includes("github.com")) {
             return res.status(400).json({
@@ -27,14 +35,39 @@ const deployRepo = async (req, res) => {
         });
         }
 
+        const validationResult = await validateGithubRepo(repoUrl);
+
+        console.log("GitHub Repository Validated Successfully")
+
+        if(!validationResult.valid) {
+            return res.status(400).json({
+                success: false,
+                message: "Github Repo didnt exist"
+            });
+        }
+
+        const dockerfileExists = await validateDockerfile(repoUrl);
+
+        console.log("Docker File Existence Validation Successful")
+
+        if (!dockerfileExists) {
+            return res.status(400).json({
+                success: false,
+                message: "Docker File not found in the repository"
+            })
+        }
     try {
+        console.log("Triggering GitHub workflow...");
+        
         await triggerGithubWorkflow(repoUrl);
 
-        console.log("Recieved Data:", repoUrl);
+        console.log("Github workflow triggered Successfully")
+
+
 
         res.json({
             success: true,
-            message: "GitHub action is trigger successfully"
+            message: "Deployment Started Successfully"
         });
 
     } catch ( error ) {
@@ -45,7 +78,7 @@ const deployRepo = async (req, res) => {
 
         res.status(500).json({
             success: false,
-            message: "Failed to trigger workflow"
+            message: "Deployment service temporarily unavailable"
         });
     }
 };

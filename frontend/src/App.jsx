@@ -1,4 +1,9 @@
 import { useState } from "react";
+import Header from "./components/Header"
+import DeployForm from "./components/DeployForm";
+import StatusMessage from "./components/StatusMessage";
+import RequirementsTerminal from "./components/RequirementsTerminal";
+
 
 function App() {
 
@@ -28,21 +33,28 @@ function App() {
   };
 
   return (
-    <div>
-      <h1>DevPortal</h1>
+    <div className="app-layout">
+      <Header />
 
-      <input
-      type="text"
-      placeholder="Enter GitHub Repository URL"
-      value={repoUrl}
-      onChange={(e) => setRepoUrl(e.target.value)}
+    <div className="main-content">
+
+    <div className="deploy-section">
+      <DeployForm
+          repoUrl={repoUrl}
+          setRepoUrl={setRepoUrl}
+          handleDeploy={handleDeploy}
+          loading={loading}
       />
-      <button onClick={handleDeploy} disabled={loading}>
-      {loading ? "Deploying..." : "Deploy"}
-      <p>{message}</p>
-      </button>
-    </div>
+
+      <StatusMessage message={message} />
+
+      </div>
+      <div className="terminal-section">
+      <RequirementsTerminal />
+      </div>
+      </div>
+      </div>
+      
   );
 }
-
 export default App;
