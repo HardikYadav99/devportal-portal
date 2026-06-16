@@ -20,17 +20,17 @@ jobs:
         run: |
           git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/HardikYadav99/devportal-gitops.git
 
-      - name: Remove old sample-app contents
+      - name: Remove old source-app contents
         run: |
-          rm -rf devportal-gitops/sample-app/*
-          rm -rf devportal-gitops/sample-app/.[!.]*
+          rm -rf devportal-gitops/source-app/*
+          rm -rf devportal-gitops/source-app/.[!.]*
 
-      - name: Copy new app into sample-app
+      - name: Copy new app into source-app
         run: |
           rm -rf user-app/.git
-          cp -r user-app/. devportal-gitops/sample-app/
+          cp -r user-app/. devportal-gitops/source-app/
 
-      - name: Commit and push updated sample-app
+      - name: Commit and push updated source-app
         run: |
           cd devportal-gitops
           
@@ -39,7 +39,7 @@ jobs:
 
           git add .
 
-          git commit -m "Automated sample-app update" || echo "No changes to commit"
+          git commit -m "Automated source-app update" || echo "No changes to commit"
 
           git push
 
