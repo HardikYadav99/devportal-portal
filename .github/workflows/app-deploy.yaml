@@ -1,0 +1,56 @@
+name: Application Deploy Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo_url:
+        description: "GitHub Repository Url"
+        required: true
+        type: string
+
+      app_name:
+        description: "Application Name"
+        required: true
+        type: string
+
+jobs:
+  validate-and-clone:
+    runs-on: ubuntu-latest
+
+    steps:
+
+      - name: Print Workflow Inputs
+        run: |
+          echo "Repository Url: ${{ inputs.repo_url }}"
+          echo "Application Name: ${{inputs.app_name }}"
+      
+      - name: Clone User Repository
+        run: |
+          git clone ${{ inputs.repo_url }} user-app
+
+      - name: Verify Repository Content
+        run: |
+          ls -la user-app
+
+      - name: Extract Commit SHA
+        run: |
+          cd user-app
+
+          echo"Getting the latest sha"
+          git rev-parse --short HEAD
+
+      - name: Print Deployable Metadata
+
+        run: |
+          echo "=================================="
+          echo "Deployment Information"
+          echo "=================================="
+          echo "Application Name: ${{ inputs.app_name }}"
+          echo "Repository URL: ${{ inputs.repo_url }}"
+
+          cd user-app
+          echo "Commit SHA"
+          git rev-parse --short HEAD
+          
+        
+      

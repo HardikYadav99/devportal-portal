@@ -2,14 +2,18 @@ console.log("Triggering Github Workflow...");
 
 const axios = require("axios");
 
-const triggerGithubWorkflow = async (repoUrl) => {
+const triggerGithubWorkflow = async (
+    repoUrl,
+    appName
+    ) => {
 
     await axios.post(
-        "https://api.github.com/repos/HardikYadav99/devportal-portal/actions/workflows/ingest.yaml/dispatches",
+        "https://api.github.com/repos/HardikYadav99/devportal-portal/actions/workflows/app-deploy.yaml/dispatches",
         {
             ref: "main",
             inputs: {
-                repo_url: repoUrl
+                repo_url: repoUrl,
+                app_name: appName
             }
         },
         {

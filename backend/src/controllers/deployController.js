@@ -9,13 +9,29 @@ const { triggerGithubWorkflow } = require("../services/githubService");
 
 const deployRepo = async (req, res) => {
 
-    const repoUrl = req.body.repoUrl;
+    const {repoUrl, appName } = req.body;
 
-    
+    const appNameRegex = /^[a-z0-9-]+$/;
+
+//TODO: In later model shift app validation in another file of services to keep deploy controller clean. 
 
     console.log("\nDeployment Request Recieved for:",)
-    console.log(repoUrl);
+    console.log("Repository URL:", repoUrl);
+    console.log("App Name:", appName);
 
+    if (!appName){
+        return res.status(400).json({
+            success: false,
+            message: "Application name is required"
+        });
+    }
+    if (!appNameRegex.test(appName)) {
+        return res.status(400).json({
+            success: false,
+            message:
+                "Application name can only contain lowercase letters, numbers and hyphens"
+        });
+    }
     if(!repoUrl.includes("github.com")) {
             return res.status(400).json({
                 success: false,
@@ -59,7 +75,10 @@ const deployRepo = async (req, res) => {
     try {
         console.log("Triggering GitHub workflow...");
         
-        await triggerGithubWorkflow(repoUrl);
+        await triggerGithubWorkflow(
+            repoUrl,
+            appName
+            );
 
         console.log("Github workflow triggered Successfully")
 
