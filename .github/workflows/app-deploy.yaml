@@ -22,7 +22,7 @@ jobs:
       - name: Print Repository URL and Application Name
         run: |
           echo "Repository URL: ${{inputs.repo_url}}"
-          echo "App Name: ${{inputs.app_name"
+          echo "App Name: ${{inputs.app_name }}"
 
       - name: Cloning User Repository
         run: |
@@ -56,17 +56,17 @@ jobs:
 
       - name: Check or Create Repository
         run: |
-          aws-ecr describe-repositories \
-            --repostiory-names ${{ inputs.app_name }} \
+          aws ecr describe-repositories \
+            --repositiory-names ${{ inputs.app_name }} \
           || \
           aws ecr create-repository \
             --repository-name ${{ inputs.app_name }}
       
       - name: Build Docker Image
-        env: IMAGE_TAG= ${{ steps.git-sha.outputs.sha }}
+        env: IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
         run: |
           docker build \
-            -t ${{ inputs.app_name }} : $IMAGE_TAG \
+            -t ${{ inputs.app_name }}:$IMAGE_TAG \
             ./user-app
 
       - name: Push Docker Image to ECR
@@ -77,10 +77,10 @@ jobs:
           
           docker tag \
             ${{ inputs.app_name }}:$IMAGE_TAG \
-            ${{ ECR_REGISTRY }}/${{ inputs.app_name }}:$IMAGE_TAG
+            $ECR_REGISTRY/${{ inputs.app_name }}:$IMAGE_TAG
 
           docker push \
-            ${{ ECR_REGISTRY }}/${{ inputs.app_name }}:$IMAGE_TAG
+            $ECR_REGISTRY/${{ inputs.app_name }}:$IMAGE_TAG
 
       - name: Print Final Image Infromation
         env:
@@ -91,7 +91,7 @@ jobs:
           echo "===================================="
           echo "Image Successfully Pushed"
           echo "===================================="
-          echo "Repository Name ${{ inputs.repo_app }}"
+          echo "Repository Name: ${{ inputs.app_name }}"
           echo "TAG: $IMAGE_TAG "
           echo "IMAGE: "
           echo " $ECR_REGISTRY/${{ inputs.app_name }}:$IMAGE_TAG"
