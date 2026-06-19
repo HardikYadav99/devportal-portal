@@ -90,10 +90,10 @@ jobs:
       - name: Build Image Repository String
         id: image-info
         env:
-          ECR_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
         run: |
-          IMAGE_REPOSITORY="$ECR_REPOSITORY/${{ inputs.app_name }}"
+          IMAGE_REPOSITORY="$ECR_REGISTRY/${{ inputs.app_name }}"
 
           echo "image_repository=$IMAGE_REPOSITORY" >> $GITHUB_OUTPUT
           echo "Image Repository = $IMAGE_REPOSITORY"
@@ -120,23 +120,7 @@ jobs:
           mkdir -p \
             devportal-gitops/source-app/${{ inputs.app_name }}
 
-      - name: Debugging the Current repository issue 
-        run: |
-          echo "Current Repository"
-          pwd
-
-          echo ""
-          echo "Print Everything in the current "
-          ls -la
-
-          echo ""
-          echo "Searching for current template"
-          find . -name "*template*"
-
-          echo ""
-          echo "Searching for the YAML "
-          find . -name "*yaml"
-
+      
       - name: Copy Templates
         run: |
 
@@ -179,6 +163,15 @@ jobs:
           sed -i \
             "s|APP_NAME|${{ inputs.app_name }}|g" \
             devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
+          
+          sed -i \
+            "s|REPO_URL|${{ inputs.repo_url }}|g" \
+            devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
+
+          sed -i \
+            "s|IMAGE_REPOSITORY|${{ IMAGE_REPOSITORY }}|g" \
+            devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
+
 
           sed -i \
             "s|APP_NAME|${{ inputs.app_name }}|g" \
