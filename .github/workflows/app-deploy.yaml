@@ -18,17 +18,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
       - name: Print Repository URL and Application Name
         run: |
-          echo "Repository URL: ${{inputs.repo_url}}"
-          echo "App Name: ${{inputs.app_name }}"
+          echo "Repository URL: ${{ inputs.repo_url }}"
+          echo "App Name: ${{ inputs.app_name }}"
 
       - name: Cloning User Repository
         run: |
           git clone ${{ inputs.repo_url }} user-app
 
-      - name: Verify Contents of the Dockerfile
+      - name: Verify Contents of the Repository
         run: |
           ls -la user-app
 
@@ -39,8 +38,7 @@ jobs:
 
           SHA=$(git rev-parse --short HEAD)
 
-          echo "sha=${SHA}" >> $GITHUB_OUTPUT
-
+          echo "sha=$SHA" >> $GITHUB_OUTPUT
           echo "Commit SHA: $SHA"
 
       - name: Configure AWS Credentials
@@ -50,9 +48,9 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Verify AWS Indentity
+      - name: Verify AWS Identity
         run: |
-          aws sts get-caller-identity 
+          aws sts get-caller-identity
 
       - name: Login to Amazon ECR
         id: login-ecr
@@ -65,13 +63,13 @@ jobs:
           || \
           aws ecr create-repository \
             --repository-name ${{ inputs.app_name }}
-      
+
       - name: Build Docker Image
         env:
-         IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
+          IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
         run: |
           docker build \
-            -t ${{inputs.app_name}}:$IMAGE_TAG \
+            -t ${{ inputs.app_name }}:$IMAGE_TAG \
             ./user-app
 
       - name: Push Docker Image to ECR
@@ -79,7 +77,6 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
         run: |
-          
           docker tag \
             ${{ inputs.app_name }}:$IMAGE_TAG \
             $ECR_REGISTRY/${{ inputs.app_name }}:$IMAGE_TAG
@@ -89,35 +86,96 @@ jobs:
 
       - name: Build Image Repository String
         id: image-info
-        env: 
-        ECR_REPOSITORY: ${{ steps.ecr-login.outputs.registry }}
-        IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
-
+        env:
+          ECR_REPOSITORY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
         run: |
+          IMAGE_REPOSITORY="$ECR_REPOSITORY/${{ inputs.app_name }}"
 
-        IMAGE_REPOSITORY=" $ECR_REPOSITORY/${{ inputs.app_name }}"
+          echo "image_repository=$IMAGE_REPOSITORY" >> $GITHUB_OUTPUT
+          echo "Image Repository = $IMAGE_REPOSITORY"
 
-        echo "image_repository=$IMAGE_REPOSITORY" >> $GITHUB_OUTPUT
-        echo "Image Repository = $image_repository"
-        
-          
-
-      - name: Print Final Image Infromation
+      - name: Print Final Image Information
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
-
         run: |
           echo "===================================="
           echo "Image Successfully Pushed"
           echo "===================================="
           echo "Repository Name: ${{ inputs.app_name }}"
-          echo "TAG: $IMAGE_TAG "
-          echo "IMAGE: "
+          echo "Tag: $IMAGE_TAG"
+          echo "Image:"
           echo "$ECR_REGISTRY/${{ inputs.app_name }}:$IMAGE_TAG"
 
-          
+      - name: Clone GitOps Repository
+        run: |
+          git clone https://x-access-token:${{ secrets.GH_PAT }}@github.com/HardikYadav99/devportal-gitops.git
 
+      - name: Create Application Folder
+        run: |
+          mkdir -p \
+            devportal-gitops/source-app/${{ inputs.app_name }}
 
+      - name: Copy Templates
+        run: |
+          cp templates/values.template.yaml \
+            devportal-gitops/source-app/${{ inputs.app_name }}/values.yaml
 
+          cp templates/metadata-template.json \
+            devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
 
+          cp templates/application-template.yaml \
+            devportal-gitops/argocd-apps/${{ inputs.app_name }}-app.yaml
+
+      - name: Replace Placeholders
+        env:
+          IMAGE_REPOSITORY: ${{ steps.image-info.outputs.image_repository }}
+          IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
+        run: |
+          CREATED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+          sed -i \
+            "s|IMAGE_REPOSITORY|$IMAGE_REPOSITORY|g" \
+            devportal-gitops/source-app/${{ inputs.app_name }}/values.yaml
+
+          sed -i \
+            "s|IMAGE_TAG|$IMAGE_TAG|g" \
+            devportal-gitops/source-app/${{ inputs.app_name }}/values.yaml
+
+          sed -i \
+            "s|APP_NAME|${{ inputs.app_name }}|g" \
+            devportal-gitops/source-app/${{ inputs.app_name }}/values.yaml
+
+          sed -i \
+            "s|CREATED_AT|$CREATED_AT|g" \
+            devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
+
+          sed -i \
+            "s|APP_NAME|${{ inputs.app_name }}|g" \
+            devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
+
+          sed -i \
+            "s|APP_NAME|${{ inputs.app_name }}|g" \
+            devportal-gitops/argocd-apps/${{ inputs.app_name }}-app.yaml
+
+      - name: Print Generated Values File
+        run: |
+          echo "================================="
+          echo "Generated values.yaml"
+          echo "================================="
+          cat \
+            devportal-gitops/source-app/${{ inputs.app_name }}/values.yaml
+
+      - name: Commit and Push Changes
+        run: |
+          cd devportal-gitops
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add .
+
+          git commit -m "Deploy ${{ inputs.app_name }}:${{ steps.git-sha.outputs.sha }}" || exit 0
+
+          git push
