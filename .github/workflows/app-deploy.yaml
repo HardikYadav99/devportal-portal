@@ -21,7 +21,6 @@ jobs:
       - name: Checkout DevPortal Repository
         uses: actions/checkout@v4
 
-    steps:
       - name: Print Repository URL and Application Name
         run: |
           echo "Repository URL: ${{ inputs.repo_url }}"
