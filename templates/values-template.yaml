@@ -1,0 +1,24 @@
+replicaCount: 1
+
+image:
+  respoitory: IMAGE_REPOSITORY
+  tag: IMAGE_TAG
+  pullPolciy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 3000
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128mi
+  requests:
+    cpu: 50m
+    memory: 64mi
+
+ingress:
+  host: APP_NAME.hardikdevportal.duckdns.org
+   
+
+

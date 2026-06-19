@@ -87,6 +87,21 @@ jobs:
           docker push \
             $ECR_REGISTRY/${{ inputs.app_name }}:$IMAGE_TAG
 
+      - name: Build Image Repository String
+        id: image-info
+        env: 
+        ECR_REPOSITORY: ${{ steps.ecr-login.outputs.registry }}
+        IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
+
+        run: |
+
+        IMAGE_REPOSITORY=" $ECR_REPOSITORY/${{ inputs.app_name }}"
+
+        echo "image_repository=$IMAGE_REPOSITORY" >> $GITHUB_OUTPUT
+        echo "Image Repository = $image_repository"
+        
+          
+
       - name: Print Final Image Infromation
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -99,9 +114,10 @@ jobs:
           echo "Repository Name: ${{ inputs.app_name }}"
           echo "TAG: $IMAGE_TAG "
           echo "IMAGE: "
-          echo " $ECR_REGISTRY/${{ inputs.app_name }}:$IMAGE_TAG"
+          echo "$ECR_REGISTRY/${{ inputs.app_name }}:$IMAGE_TAG"
 
           
+
 
 
 
