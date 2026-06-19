@@ -123,14 +123,14 @@ jobs:
           echo "checking the current directory"
           ls -l
           pwd
-          
-          cp templates/values.template.yaml \
+
+          cp /templates/values.template.yaml \
             devportal-gitops/source-app/${{ inputs.app_name }}/values.yaml
 
-          cp templates/metadata-template.json \
+          cp /templates/metadata-template.json \
             devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
 
-          cp templates/application-template.yaml \
+          cp /templates/application-template.yaml \
             devportal-gitops/argocd-apps/${{ inputs.app_name }}-app.yaml
 
       - name: Replace Placeholders
