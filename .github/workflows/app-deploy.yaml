@@ -119,6 +119,11 @@ jobs:
 
       - name: Copy Templates
         run: |
+
+          echo "checking the current directory"
+          ls -l
+          pwd
+          
           cp templates/values.template.yaml \
             devportal-gitops/source-app/${{ inputs.app_name }}/values.yaml
 
