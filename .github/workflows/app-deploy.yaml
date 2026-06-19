@@ -117,6 +117,23 @@ jobs:
           mkdir -p \
             devportal-gitops/source-app/${{ inputs.app_name }}
 
+      - name: Debugging the Current repository issue 
+        run: |
+          echo "Current Repository"
+          pwd
+
+          echo ""
+          echo "Print Everything in the current "
+          ls -la
+
+          echo ""
+          echo "Searching for current template"
+          find . -name "*template*"
+
+          echo ""
+          echo "Searching for the YAML "
+          find . -name "*yaml"
+
       - name: Copy Templates
         run: |
 
