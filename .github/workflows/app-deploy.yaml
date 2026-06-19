@@ -14,43 +14,89 @@ on:
         type: string
 
 jobs:
-  validate-and-clone:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
 
-      - name: Print Workflow Inputs
+      - name: Print Repository URL and Application Name
         run: |
-          echo "Repository Url: ${{ inputs.repo_url }}"
-          echo "Application Name: ${{inputs.app_name }}"
-      
-      - name: Clone User Repository
+          echo "Repository URL: ${{inputs.repo_url}}"
+          echo "App Name: ${{inputs.app_name"
+
+      - name: Cloning User Repository
         run: |
           git clone ${{ inputs.repo_url }} user-app
 
-      - name: Verify Repository Content
+      - name: Verify Contents of the Dockerfile
         run: |
           ls -la user-app
 
-      - name: Extract Commit SHA
+      - name: Get Commit SHA
+        id: git-sha
         run: |
           cd user-app
 
-          echo "Getting the latest sha"
-          git rev-parse --short HEAD
+          SHA=$(git rev-parse --short HEAD)
 
-      - name: Print Deployable Metadata
+          echo "sha=${SHA}" >> $GITHUB_OUTPUT
 
+          echo "Commit SHA: $SHA"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Check or Create Repository
         run: |
-          echo "=================================="
-          echo "Deployment Information"
-          echo "=================================="
-          echo "Application Name: ${{ inputs.app_name }}"
-          echo "Repository URL: ${{ inputs.repo_url }}"
-
-          cd user-app
-          echo "Commit SHA"
-          git rev-parse --short HEAD
-          
-        
+          aws-ecr describe-repositories \
+            --repostiory-names ${{ inputs.app_name }} \
+          || \
+          aws ecr create-repository \
+            --repository-name ${{ inputs.app_name }}
       
+      - name: Build Docker Image
+        env: IMAGE_TAG= ${{ steps.git-sha.outputs.sha }}
+        run: |
+          docker build \
+            -t ${{ inputs.app_name }} : $IMAGE_TAG \
+            ./user-app
+
+      - name: Push Docker Image to ECR
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
+        run: |
+          
+          docker tag \
+            ${{ inputs.app_name }}:$IMAGE_TAG \
+            ${{ ECR_REGISTRY }}/${{ inputs.app_name }}:$IMAGE_TAG
+
+          docker push \
+            ${{ ECR_REGISTRY }}/${{ inputs.app_name }}:$IMAGE_TAG
+
+      - name: Print Final Image Infromation
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
+
+        run: |
+          echo "===================================="
+          echo "Image Successfully Pushed"
+          echo "===================================="
+          echo "Repository Name ${{ inputs.repo_app }}"
+          echo "TAG: $IMAGE_TAG "
+          echo "IMAGE: "
+          echo " $ECR_REGISTRY/${{ inputs.app_name }}:$IMAGE_TAG"
+
+          
+
+
+
