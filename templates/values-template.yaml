@@ -1,9 +1,9 @@
 replicaCount: 1
 
 image:
-  respoitory: IMAGE_REPOSITORY
+  repository: IMAGE_REPOSITORY
   tag: IMAGE_TAG
-  pullPolciy: IfNotPresent
+  pullPolicy: IfNotPresent
 
 service:
   type: ClusterIP
@@ -12,13 +12,10 @@ service:
 resources:
   limits:
     cpu: 100m
-    memory: 128mi
+    memory: 128Mi
   requests:
     cpu: 50m
-    memory: 64mi
+    memory: 64Mi
 
 ingress:
   host: APP_NAME.hardikdevportal.duckdns.org
-   
-
-
