@@ -169,7 +169,7 @@ jobs:
             devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
 
           sed -i \
-            "s|IMAGE_REPOSITORY|${{ IMAGE_REPOSITORY }}|g" \
+            "s|IMAGE_REPOSITORY|$IMAGE_REPOSITORY|g" \
             devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
 
 
