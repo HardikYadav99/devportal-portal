@@ -1,0 +1,52 @@
+name: Delete Application Pipeline 
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: "Application Name"
+        required: true
+        type: string
+
+jobs:
+  delete application:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Cloning GitOps Repository
+        run: |
+          git clone "https://x-access-token:${{ secrets.GH_PAT }}@github.com/HardikYadav99/devportal-gitops.git"
+
+      - name: Delete Application Files
+        run: |
+        rm -rf \
+        devportal-gitops/source-app/${{ inputs.app_name }}
+
+        rm -f \
+        devportal-gitops/argocd-apps/${{ inputs.app_name }}-app.yaml
+
+      - name: Verfication of Remaning Files
+        run: |
+          echo ""
+          echo "Remaining Apps In Source App"
+          ls -la devportal-gitops/source-app
+
+          echo "Remaing ArgoCD Templates"
+          ls -la devportal-gitops/source-app
+      
+      - name: Commit Changes
+        run: |
+
+          cd devportal-gitops
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add .
+          git commit \
+            -m "Deleted ${{ inputs.app_name }}" \
+          || exit 0
+          git push 
+
+
+
