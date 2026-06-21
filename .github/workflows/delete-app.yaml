@@ -9,7 +9,7 @@ on:
         type: string
 permissions:
   contents: write
-  
+
 jobs:
   delete-application:
     runs-on: ubuntu-latest
@@ -19,19 +19,39 @@ jobs:
         run: |
           git clone "https://x-access-token:${{ secrets.GH_PAT }}@github.com/HardikYadav99/devportal-gitops.git"
 
-      - name: Delete Application Files
+      - name: Delete ArgoCD application 
         run: |
-          rm -rf \
-            devportal-gitops/source-app/${{ inputs.app_name }}
 
           rm -f \
             devportal-gitops/argocd-apps/${{ inputs.app_name }}-app.yaml
+
+      - name: Commit ArgoCd Application deletion 
+        run: |
+          cd devportal-gitops
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add .
+          git commit \
+            -m "Deleted ArgoCd ${{ inputs.app_name }}-app.yaml" || true
+          git push
+
+      - name: Wait for ArgoCd Prune
+        run: |
+          echo "Waiting for ArgoCd to delete and clean up resources clean up"
+          sleep 60
+
+      - name: Delete Source Application 
+        run: |
+          rm -rf \
+            devportal-gitops/source-app/${{ inputs.app_name }}
 
       - name: Verfication of Remaning Files
         run: |
           echo ""
           echo "Remaining Apps In Source App"
-          ls -la devportal-gitops/source-app
+          ls -la devportal-gitops/argocd-apps
 
           echo "Remaing ArgoCD Templates"
           ls -la devportal-gitops/source-app
@@ -46,8 +66,7 @@ jobs:
 
           git add .
           git commit \
-            -m "Deleted ${{ inputs.app_name }}" \
-          || exit 0
+            -m "Deleted ${{ inputs.app_name }}" || true
           git push 
 
 
