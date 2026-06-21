@@ -7,9 +7,11 @@ on:
         description: "Application Name"
         required: true
         type: string
-
+permissions:
+  contents: write
+  
 jobs:
-  delete application:
+  delete-application:
     runs-on: ubuntu-latest
 
     steps:
@@ -19,11 +21,11 @@ jobs:
 
       - name: Delete Application Files
         run: |
-        rm -rf \
-        devportal-gitops/source-app/${{ inputs.app_name }}
+          rm -rf \
+            devportal-gitops/source-app/${{ inputs.app_name }}
 
-        rm -f \
-        devportal-gitops/argocd-apps/${{ inputs.app_name }}-app.yaml
+          rm -f \
+            devportal-gitops/argocd-apps/${{ inputs.app_name }}-app.yaml
 
       - name: Verfication of Remaning Files
         run: |
