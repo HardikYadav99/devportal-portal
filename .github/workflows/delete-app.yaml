@@ -40,7 +40,15 @@ jobs:
       - name: Wait for ArgoCd Prune
         run: |
           echo "Waiting for ArgoCd to delete and clean up resources clean up"
-          sleep 300
+          sleep 180
+
+      - name: Remove finalizers if application is stuck
+        run: |
+          kubectl patch application ${{ inputs.app_name }} \
+            -n argocd \
+            --type merge \
+            --p '{"metadata":{"finalizers":[]}}' || true
+            
 
       - name: Delete Source Application 
         run: |
