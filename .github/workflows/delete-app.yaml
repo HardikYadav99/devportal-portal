@@ -36,7 +36,16 @@ jobs:
           git commit \
             -m "Deleted ArgoCd ${{ inputs.app_name }}-app.yaml" || true
           git push
+          
+      - name: Wait for ArgoCd Prune
+        run: |
+          echo "Waiting for ArgoCd to delete and clean up resources clean up"
+          sleep 180
 
+      - name: Delete Source Application 
+        run: |
+          rm -rf \
+            devportal-gitops/source-app/${{ inputs.app_name }}
 
       - name: Verfication of Remaning Files
         run: |
