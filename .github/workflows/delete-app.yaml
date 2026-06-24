@@ -25,6 +25,11 @@ jobs:
         run: |
           git clone "https://x-access-token:${{ secrets.GH_PAT }}@github.com/HardikYadav99/devportal-gitops.git"
 
+      - name: Disable selfHeal on live Application object first
+        run: |
+          kubectl patch application ${{ inputs.app_name }} -n argocd --type merge -p '{"spec":{"syncPolicy":null}}'
+          sleep 5
+
       - name: Delete the live ArgoCD Application object
         run: |
           kubectl delete application ${{ inputs.app_name }} -n argocd --wait=true --timeout=120s
