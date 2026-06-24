@@ -42,12 +42,11 @@ jobs:
 
       - name: Deleting Kubernetes App related resources
         run: |
-          kubectl delete deployment,service,ingress \
-            -n default \
-            -l app=${{ inputs.app_name }} \
-            --ignore-not-found
+          kubectl delete deployment -n default -l app=${{ inputs.app_name }} --ignore-not-found
+          kubectl delete service -n default -l app=${{ inputs.app_name }} --ignore-not-found
+          kubectl delete ingress -n default -l app=${{ inputs.app_name }} --ignore-not-found
 
-          kubectl delete secrets ${{ inputs.app_name }}-tls \
+          kubectl delete secret ${{ inputs.app_name }}-tls \
             -n default \
             --ignore-not-found
       
