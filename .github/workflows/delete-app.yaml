@@ -1,10 +1,10 @@
-name: Delete Application Pipeline
+name: Deletion Application Pipeline
 
 on:
   workflow_dispatch:
     inputs:
       app_name:
-        description: "Application Name"
+        description: 'App Name from the user'
         required: true
         type: string
 
@@ -12,8 +12,9 @@ permissions:
   contents: write
 
 jobs:
-  delete-application:
+  delete-applications:
     runs-on: ubuntu-latest
+
     steps:
       - name: Configure kubectl access
         run: |
@@ -21,63 +22,52 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
           kubectl get application -n argocd
 
-      - name: Cloning GitOps Repository
+      - name: Cloning the Gitops repository
         run: |
           git clone "https://x-access-token:${{ secrets.GH_PAT }}@github.com/HardikYadav99/devportal-gitops.git"
 
-      - name: Disable selfHeal on live Application object first
+      - name: Deleting Argocd application file and pushing to github
         run: |
-          kubectl patch application ${{ inputs.app_name }} -n argocd --type merge -p '{"spec":{"syncPolicy":null}}'
-          sleep 5
-
-      - name: Delete the live ArgoCD Application object
+          rm -f devportal-gitops/argocd-apps/${{ inputs.app_name }}-app.yaml 
+          cd devportal-gitops
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .
+          git commit -m "Deleted Argocd-apps/${{ inputs.app_name }}" || true 
+          git push origin main
+    
+      - name: Wait for Argocd to detect change
         run: |
-          kubectl delete application ${{ inputs.app_name }} -n argocd --wait=true --timeout=120s
+          sleep 30
 
-      - name: Verify no orphaned resources remain
+      - name: Deleting Kubernetes App related resources
         run: |
-          REMAINING=$(kubectl get all -n default -l app.kubernetes.io/instance=${{ inputs.app_name }} --no-headers 2>/dev/null | wc -l)
-          if [ "$REMAINING" -gt 0 ]; then
-            echo "ERROR: $REMAINING resources still exist after deletion"
-            kubectl get all -n default -l app.kubernetes.io/instance=${{ inputs.app_name }}
-            exit 1
-          fi
-          echo "Confirmed: zero resources remain for ${{ inputs.app_name }}"
+          kubectl delete deployment,service,ingress \
+            -n default \
+            -l app=${{ inputs.app_name }} \
+            --ignore-not-found
 
-      - name: Delete ArgoCD application manifest from Git
+          kubectl delete secrets ${{ inputs.app_name }}-tls \
+            -n default \
+            --ignore-not-found
+      
+      - name: Deleting Source Application 
         run: |
-          rm -f \
-            devportal-gitops/argocd-apps/${{ inputs.app_name }}-app.yaml
+          rm -rf devportal-gitops/source-app/${{ inputs.app_name }}
 
-      - name: Commit ArgoCd Application deletion
+      - name: Push source files app deletion to github 
         run: |
           cd devportal-gitops
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           git add .
-          git commit \
-            -m "Deleted ArgoCd ${{ inputs.app_name }}-app.yaml" || true
-          git push
+          git commit -m "Deleted source-app/${{ inputs.app_name }} successfully" || true
+          git push origin main
 
-      - name: Delete Source Application
+      - name: Check the remaining files 
         run: |
-          rm -rf \
-            devportal-gitops/source-app/${{ inputs.app_name }}
-
-      - name: Verfication of Remaning Files
-        run: |
-          echo ""
-          echo "Remaining Apps In Source App"
+          echo "Remaining files in Argocd-apps folder"
           ls -la devportal-gitops/argocd-apps
-          echo "Remaing ArgoCD Templates"
+          echo ""
+          echo "Remaining Files in Source-App folder"
           ls -la devportal-gitops/source-app
-
-      - name: Commit Changes
-        run: |
-          cd devportal-gitops
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          git add .
-          git commit \
-            -m "Deleted ${{ inputs.app_name }}" || true
-          git push
