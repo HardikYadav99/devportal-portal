@@ -40,6 +40,11 @@ jobs:
         run: |
           sleep 30
 
+      - name: Force ArgoCD to refresh immediately
+        run: |
+          kubectl patch application ${{ inputs.app_name }} -n argocd --type merge -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}'
+          sleep 10
+
       - name: Deleting Kubernetes App related resources
         run: |
           kubectl delete deployment -n default -l app=${{ inputs.app_name }} --ignore-not-found
