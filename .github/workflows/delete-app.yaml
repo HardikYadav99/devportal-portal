@@ -97,9 +97,9 @@ jobs:
       - name: Delete Image Repository from AWS ECR
         run: |
           aws ecr delete-repository \
-            --repository-name ${{ inputs.app_name }}
-            --region ap-south-1
-            --force || echo "ECR Repository Not Found, skippint"
+            --repository-name ${{ inputs.app_name }}\
+            --region ap-south-1\
+            --force || echo "ECR Repository Not Found, skipping"
 
       
 
