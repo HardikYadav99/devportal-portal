@@ -1,10 +1,10 @@
-name: Deletion Application Pipeline
+name: Delete Application Pipeline
 
 on:
   workflow_dispatch:
     inputs:
       app_name:
-        description: 'App Name from the user'
+        description: 'Application Name'
         required: true
         type: string
 
@@ -12,7 +12,7 @@ permissions:
   contents: write
 
 jobs:
-  delete-applications:
+  delete-application:
     runs-on: ubuntu-latest
 
     steps:
@@ -20,86 +20,129 @@ jobs:
         run: |
           mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
-          kubectl get application -n argocd
+          kubectl get applications -n argocd
 
-      - name: Configure AWS credentials 
+      - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-
-
-      - name: Cloning the Gitops repository
+      - name: Clone GitOps repository
         run: |
           git clone "https://x-access-token:${{ secrets.GH_PAT }}@github.com/HardikYadav99/devportal-gitops.git"
 
-      - name: Deleting Argocd application file and pushing to github
+      #####################################################
+      # Disable root selfHeal
+      #####################################################
+
+      - name: Disable root selfHeal
         run: |
-          rm -f devportal-gitops/argocd-apps/${{ inputs.app_name }}-app.yaml 
           cd devportal-gitops
+
+          sed -i '/selfHeal:/s/true/false/' argocd-apps/argocd-root-app.yaml
+
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git add .
-          git commit -m "Deleted Argocd-apps/${{ inputs.app_name }}" || true 
-          git push origin main
-    
-      - name: Wait for Argocd to detect change
-        run: |
-          sleep 180
 
-      - name: Force ArgoCD to refresh immediately
+          git add .
+          git commit -m "Temporarily disable root selfHeal" || true
+          git push origin main
+
+      #####################################################
+      # Disable child selfHeal
+      #####################################################
+
+      - name: Disable child selfHeal
         run: |
-          if kubectl patch application ${{ inputs.app_name }} \
-            -n argocd \
-            --type merge \
-            -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}' \
-            --ignore-not-found 2>/dev/null; then
-            
-            echo "Patch successful, waiting for refresh..."
-            sleep 180
-          else
-            echo "Application not found, skipping refresh and sleep."
+          cd devportal-gitops
+
+          if [ -f "argocd-apps/${{ inputs.app_name }}-app.yaml" ]; then
+            sed -i '/selfHeal:/s/true/false/' argocd-apps/${{ inputs.app_name }}-app.yaml
+
+            git add .
+            git commit -m "Temporarily disable selfHeal for ${{ inputs.app_name }}" || true
+            git push origin main
           fi
 
-      - name: Deleting Kubernetes App related resources
-        run: |
-          kubectl delete deployment -n default -l app=${{ inputs.app_name }} --ignore-not-found
-          kubectl delete service -n default -l app=${{ inputs.app_name }} --ignore-not-found
-          kubectl delete ingress -n default -l app=${{ inputs.app_name }} --ignore-not-found
+      #####################################################
+      # Give Argo time to pick up the changes
+      #####################################################
 
-          kubectl delete secret ${{ inputs.app_name }}-tls \
-            -n default \
-            --ignore-not-found
-      
-      - name: Deleting Source Application 
+      - name: Wait for Argo reconciliation
+        run: |
+          sleep 90
+
+      #####################################################
+      # Delete child application yaml
+      #####################################################
+
+      - name: Delete child application yaml
+        run: |
+          rm -f devportal-gitops/argocd-apps/${{ inputs.app_name }}-app.yaml
+
+          cd devportal-gitops
+
+          git add .
+          git commit -m "Delete application ${{ inputs.app_name }}" || true
+          git push origin main
+
+      #####################################################
+      # Wait for Application deletion
+      #####################################################
+
+      - name: Wait until application is deleted
+        run: |
+          echo "Waiting for application deletion..."
+
+          timeout 900 bash -c '
+            until ! kubectl get application ${{ inputs.app_name }} -n argocd >/dev/null 2>&1
+            do
+              echo "Application still exists..."
+              sleep 10
+            done
+          '
+
+          echo "Application deleted successfully."
+
+      #####################################################
+      # Delete source manifests
+      #####################################################
+
+      - name: Delete source manifests
         run: |
           rm -rf devportal-gitops/source-app/${{ inputs.app_name }}
 
-      - name: Push source files app deletion to github 
+      - name: Push source deletion
         run: |
           cd devportal-gitops
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
+
           git add .
-          git commit -m "Deleted source-app/${{ inputs.app_name }} successfully" || true
+          git commit -m "Delete source-app/${{ inputs.app_name }}" || true
           git push origin main
 
-      - name: Check the remaining files 
-        run: |
-          echo "Remaining files in Argocd-apps folder"
-          ls -la devportal-gitops/argocd-apps
-          echo ""
-          echo "Remaining Files in Source-App folder"
-          ls -la devportal-gitops/source-app
+      #####################################################
+      # Delete ECR repository
+      #####################################################
 
-      - name: Delete Image Repository from AWS ECR
+      - name: Delete ECR repository
         run: |
           aws ecr delete-repository \
-            --repository-name ${{ inputs.app_name }}\
-            --region ap-south-1\
-            --force || echo "ECR Repository Not Found, skipping"
+            --repository-name ${{ inputs.app_name }} \
+            --region ap-south-1 \
+            --force || echo "ECR repository not found"
 
-      
+      #####################################################
+      # Re-enable root selfHeal
+      #####################################################
 
+      - name: Re-enable root selfHeal
+        run: |
+          cd devportal-gitops
+
+          sed -i '/selfHeal:/s/false/true/' argocd-apps/argocd-root-app.yaml
+
+          git add .
+          git commit -m "Re-enable root selfHeal" || true
+          git push origin main
