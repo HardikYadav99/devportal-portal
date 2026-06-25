@@ -47,12 +47,21 @@ jobs:
     
       - name: Wait for Argocd to detect change
         run: |
-          sleep 30
+          sleep 180
 
       - name: Force ArgoCD to refresh immediately
         run: |
-          kubectl patch application ${{ inputs.app_name }} -n argocd --type merge -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}' || echo "Application not found skipping refresh"
-          sleep 10
+          if kubectl patch application ${{ inputs.app_name }} \
+            -n argocd \
+            --type merge \
+            -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}' \
+            --ignore-not-found 2>/dev/null; then
+            
+            echo "Patch successful, waiting for refresh..."
+            sleep 180
+          else
+            echo "Application not found, skipping refresh and sleep."
+          fi
 
       - name: Deleting Kubernetes App related resources
         run: |
