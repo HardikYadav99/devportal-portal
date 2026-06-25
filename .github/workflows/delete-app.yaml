@@ -22,6 +22,15 @@ jobs:
           echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
           kubectl get application -n argocd
 
+      - name: Configure AWS credentials 
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+
+
       - name: Cloning the Gitops repository
         run: |
           git clone "https://x-access-token:${{ secrets.GH_PAT }}@github.com/HardikYadav99/devportal-gitops.git"
@@ -42,7 +51,7 @@ jobs:
 
       - name: Force ArgoCD to refresh immediately
         run: |
-          kubectl patch application ${{ inputs.app_name }} -n argocd --type merge -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}' || echo "Application not found skippint refresh"
+          kubectl patch application ${{ inputs.app_name }} -n argocd --type merge -p '{"metadata":{"annotations":{"argocd.argoproj.io/refresh":"hard"}}}' || echo "Application not found skipping refresh"
           sleep 10
 
       - name: Deleting Kubernetes App related resources
@@ -75,3 +84,13 @@ jobs:
           echo ""
           echo "Remaining Files in Source-App folder"
           ls -la devportal-gitops/source-app
+
+      - name: Delete Image Repository from AWS ECR
+        run: |
+          aws ecr delete-repository \
+            --repository-name ${{ inputs.app_name }}
+            --region ap-south-1
+            --force || echo "ECR Repository Not Found, skippint"
+
+      
+
