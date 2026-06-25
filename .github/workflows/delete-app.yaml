@@ -32,8 +32,51 @@ jobs:
       - name: Clone GitOps repository
         run: |
           git clone "https://x-access-token:${{ secrets.GH_PAT }}@github.com/HardikYadav99/devportal-gitops.git"
-         
-        #Delete Child application Yaml file
+
+    
+      # Disable root selfHeal
+      
+
+      - name: Disable root selfHeal
+        run: |
+          cd devportal-gitops
+
+          sed -i '/selfHeal:/s/true/false/' argocd-apps/argocd-root-app.yaml
+
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+
+          git add .
+          git commit -m "Temporarily disable root selfHeal" || true
+          git push origin main
+
+      
+      # Disable child selfHeal
+
+
+      - name: Disable child selfHeal
+        run: |
+          cd devportal-gitops
+
+          if [ -f "argocd-apps/${{ inputs.app_name }}-app.yaml" ]; then
+            sed -i '/selfHeal:/s/true/false/' argocd-apps/${{ inputs.app_name }}-app.yaml
+
+            git add .
+            git commit -m "Temporarily disable selfHeal for ${{ inputs.app_name }}" || true
+            git push origin main
+          fi
+
+   
+      # Give Argo time to pick up the changes
+     
+
+      - name: Wait for Argo reconciliation
+        run: |
+          sleep 90
+
+     
+      # Delete child application yaml
+
 
       - name: Delete child application yaml
         run: |
@@ -45,9 +88,8 @@ jobs:
           git commit -m "Delete application ${{ inputs.app_name }}" || true
           git push origin main
 
-
       # Wait for Application deletion
-
+     
 
       - name: Wait until application is deleted
         run: |
@@ -79,9 +121,8 @@ jobs:
           git commit -m "Delete source-app/${{ inputs.app_name }}" || true
           git push origin main
 
-
       # Delete ECR repository
-  
+ 
 
       - name: Delete ECR repository
         run: |
@@ -90,3 +131,16 @@ jobs:
             --region ap-south-1 \
             --force || echo "ECR repository not found"
 
+
+      # Re-enable root selfHeal
+
+
+      - name: Re-enable root selfHeal
+        run: |
+          cd devportal-gitops
+
+          sed -i '/selfHeal:/s/false/true/' argocd-apps/argocd-root-app.yaml
+
+          git add .
+          git commit -m "Re-enable root selfHeal" || true
+          git push origin main
