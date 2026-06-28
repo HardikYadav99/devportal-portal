@@ -180,10 +180,7 @@ jobs:
           sed -i \
             "s|APP_NAME|${{ inputs.app_name }}|g" \
             devportal-gitops/argocd-apps/${{ inputs.app_name }}-app.yaml
-          
-          sed -i \
-            "s|APP_NAME|${{ inputs.app_name }}|g" \
-            devportal-gitops/argocd-apps/${{ inputs.app_name }}-app.yaml
+
 
       - name: Print Generated Values File
         run: |
