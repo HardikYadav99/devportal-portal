@@ -1,7 +1,9 @@
 {
     "appName": "APP_NAME",
+    "namespace": "APP_NAME"
     "repoUrl": "REPO_URL",
     "imageRepository": "IMAGE_REPOSITORY",
     "createdAt": "CREATED_AT",
     "status": "active"
+    "type": "Single"
   }
