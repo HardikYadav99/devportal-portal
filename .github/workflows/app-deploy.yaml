@@ -157,7 +157,7 @@ jobs:
             devportal-gitops/source-app/${{ inputs.app_name }}/values.yaml
 
           sed -i \
-            "s|APP_NAME|${{ inputs.app_name }}|g"
+            "s|APP_NAME|${{ inputs.app_name }}|g" \
             devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
 
           sed -i \
