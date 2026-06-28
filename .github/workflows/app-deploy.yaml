@@ -176,6 +176,12 @@ jobs:
             "s|IMAGE_REPOSITORY|$IMAGE_REPOSITORY|g" \
             devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
 
+
+          sed -i \
+            "s|APP_NAME|${{ inputs.app_name }}|g" \
+            devportal-gitops/argocd-apps/${{ inputs.app_name }}-app.yaml
+
+
       - name: Print Generated Values File
         run: |
           echo "================================="
