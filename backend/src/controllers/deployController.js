@@ -2,7 +2,7 @@
 
 const {
      validateGithubRepo,
-     validateDockerfile
+     validateDockerfiles
     } = require("../services/githubValidationService");
 
 const { triggerGithubWorkflow } = require("../services/githubService");
@@ -62,16 +62,16 @@ const deployRepo = async (req, res) => {
             });
         }
 
-        const dockerfileExists = await validateDockerfile(repoUrl);
+        const dockervalidation = await validateDockerfiles(repoUrl);
 
-        console.log("Docker File Existence Validation Successful")
-
-        if (!dockerfileExists) {
+        {`console.log("Docker File Existence validation successfull )
+        
+        if(!dockervalidation.hasDockerfile) {
             return res.status(400).json({
-                success: false,
-                message: "Docker File not found in the repository"
-            })
-        }
+                success: false
+                message: "Repository does not seem to have Dockerfile, reppository should contain either frontend/Dockerfile or backend/Docker. If deploying full stack it should have both"
+            });
+        }`}
     try {
         console.log("Triggering GitHub workflow...");
         

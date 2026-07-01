@@ -51,7 +51,7 @@ const validateDockerfiles = async (repoUrl) => {
     return {
         frontendExists,
         backendExists,
-        hasdockerfile: frontendExists || backendExists
+        hasDockerfile: frontendExists || backendExists
 
     }
     
