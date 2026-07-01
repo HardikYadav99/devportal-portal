@@ -79,6 +79,10 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Debugging step to get list of content of frontend folder
+        run: |
+          ls -R user-app/frontend
+
       - name: Create Frontend Repository, build docker and push to ECR
         id: frontend-image
         env:
