@@ -23,29 +23,41 @@ const validateGithubRepo = async (repoUrl) => {
     }
 };
 
-const validateDockerfile = async (repoUrl) => {
+const checkFileExists = async ( owner, repo, path) => {
+    const url =
+        `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+    
+    try {
+        await axios.get(url);
+
+        return true;
+    } catch (error) {
+        return false;
+    }
+
+};
+
+
+const validateDockerfiles = async (repoUrl) => {
     const parts = repoUrl.split("/");
 
     const owner = parts[3];
     const repo = parts[4].replace(".git","");
 
-    const dockerfileApiUrl =
-    `https://api.github.com/repos/${owner}/${repo}/contents/Dockerfile`;
+    const [frontendExists, backendExists] = await Promise.all([
+        checkFileExists(owner,repo, "frontend/Dockerfile"),
+        checkFileExists(owner,repo,"backend/Dockerfile")
+    ]);
+    return {
+        frontendExists,
+        backendExists,
+        hasdockerfile: frontendExists || backendExists
 
-    console.log("Checking Dockerfile:", dockerfileApiUrl);
-
-    try {
-        await axios.get(dockerfileApiUrl);
-
-        return true;
-
-    } catch(error) {
-
-        return false
     }
+    
 };
 
 module.exports = {
     validateGithubRepo,
-    validateDockerfile
+    validateDockerfiles
 };
