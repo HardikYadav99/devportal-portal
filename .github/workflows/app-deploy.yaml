@@ -89,7 +89,7 @@ jobs:
           if [ "$FRONTEND_ENABLED" = "true" ]; then
 
           aws ecr describe-repositories \
-            --repository-names ${{ inputs.app_name }}-frontend
+            --repository-names ${{ inputs.app_name }}-frontend \
           || \
           aws ecr create-repository \
             --repository-name ${{ inputs.app_name }}-frontend
