@@ -256,11 +256,8 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add \
-            source-app/${{ inputs.app_name }}/values.yaml \
-            source-app/${{ inputs.app_name }}/metadata.json
-
-
+          git add .
+            
           git commit -m "Deploy ${{ inputs.app_name }}:${{ steps.git-sha.outputs.sha }}" || exit 0
 
           git push
