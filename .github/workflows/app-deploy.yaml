@@ -13,6 +13,7 @@ on:
         required: true
         type: string
 
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
@@ -31,8 +32,27 @@ jobs:
           git clone ${{ inputs.repo_url }} user-app
 
       - name: Verify Contents of the Repository
+        id: detect-app-type
         run: |
+
+          FRONTEND_ENABLED=false
+          BACKEND_ENABLED=false
+
           ls -la user-app
+
+          if [ -d "user-app/frontend" ]; then
+          FRONTEND_ENABLED=true
+          fi
+
+          if [ -d "user-app/backend" ]; then
+          BACKEND_ENABLED=true
+          fi
+
+          echo "frontend_enabled=$FRONTEND_ENABLED" >> $GITHUB_OUTPUT
+          echo "backend_enabled=$BACKEND_ENABLED" >> $GITHUB_OUTPUT
+
+          echo "Frontend Enabled = $FRONTEND_ENABLED"
+          echo "Backend Enabled = $BACKEND_ENABLED"
 
       - name: Get Commit SHA
         id: git-sha
@@ -59,44 +79,64 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Check or Create Repository
+      - name: Create Frontend Repository, build docker and push to ECR
+        id: frontend-image
+        env:
+          FRONTEND_ENABLED: ${{ steps.detect-app-type.outputs.frontend_enabled }}
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
         run: |
+          if [ "$FRONTEND_ENABLED" = "true" ]; then
+
           aws ecr describe-repositories \
-            --repository-names ${{ inputs.app_name }} \
+            --repository-names ${{ inputs.app_name }}-frontend
           || \
           aws ecr create-repository \
-            --repository-name ${{ inputs.app_name }}
+            --repository-name ${{ inputs.app_name }}-frontend
 
-      - name: Build Docker Image
-        env:
-          IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
-        run: |
           docker build \
-            -t ${{ inputs.app_name }}:$IMAGE_TAG \
-            ./user-app
+            -t $ECR_REGISTRY/${{ inputs.app_name }}-frontend:$IMAGE_TAG \
+            ./user-app/frontend
+          
+          docker push \
+            $ECR_REGISTRY/${{ inputs.app_name }}-frontend:$IMAGE_TAG
+          
+          IMAGE_FRONTEND_REPOSITORY=$ECR_REGISTRY/${{ inputs.app_name }}-frontend
+          
+          echo "image_frontend_repository=$IMAGE_FRONTEND_REPOSITORY" >> $GITHUB_OUTPUT
+          echo "Image Frontend Repository: $IMAGE_FRONTEND_REPOSITORY "
 
-      - name: Push Docker Image to ECR
+          fi
+
+      - name: Create Backend Repository, build image and push to ECR
+        id: backend-image
         env:
+          BACKEND_ENABLED: ${{ steps.detect-app-type.outputs.backend_enabled }}
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
         run: |
-          docker tag \
-            ${{ inputs.app_name }}:$IMAGE_TAG \
-            $ECR_REGISTRY/${{ inputs.app_name }}:$IMAGE_TAG
+          if [ "$BACKEND_ENABLED" = "true" ]; then
+        
+          aws ecr describe-repositories \
+            --repository-names ${{ inputs.app_name }}-backend \
+          || \
+          aws ecr create-repository \
+            --repository-name ${{ inputs.app_name }}-backend
+
+          docker build \
+            -t $ECR_REGISTRY/${{ inputs.app_name }}-backend:$IMAGE_TAG \
+            ./user-app/backend
 
           docker push \
-            $ECR_REGISTRY/${{ inputs.app_name }}:$IMAGE_TAG
+            $ECR_REGISTRY/${{ inputs.app_name }}-backend:$IMAGE_TAG
 
-      - name: Build Image Repository String
-        id: image-info
-        env:
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
-        run: |
-          IMAGE_REPOSITORY="$ECR_REGISTRY/${{ inputs.app_name }}"
+          IMAGE_BACKEND_REPOSITORY=$ECR_REGISTRY/${{ inputs.app_name }}-backend
 
-          echo "image_repository=$IMAGE_REPOSITORY" >> $GITHUB_OUTPUT
-          echo "Image Repository = $IMAGE_REPOSITORY"
+          echo "image_backend_repository=$IMAGE_BACKEND_REPOSITORY" >> $GITHUB_OUTPUT
+          echo "Image Backend Repository: $IMAGE_BACKEND_REPOSITORY"
+
+          fi
+
 
       - name: Print Final Image Information
         env:
@@ -106,10 +146,12 @@ jobs:
           echo "===================================="
           echo "Image Successfully Pushed"
           echo "===================================="
-          echo "Repository Name: ${{ inputs.app_name }}"
+          echo "Frontend Repository Name: ${{ steps.frontend-image.outputs.image_frontend_repository }}"
+          echo "Backend Repository Name: ${{ steps.backend-image.outputs.image_backend_repository }}"
           echo "Tag: $IMAGE_TAG"
           echo "Image:"
-          echo "$ECR_REGISTRY/${{ inputs.app_name }}:$IMAGE_TAG"
+          echo "$ECR_REGISTRY/${{ inputs.app_name }}-frontend:$IMAGE_TAG"
+          echo "$ECR_REGISTRY/${{ inputs.app_name }}-backend:$IMAGE_TAG"
 
       - name: Clone GitOps Repository
         run: |
@@ -139,13 +181,18 @@ jobs:
 
       - name: Replace Placeholders
         env:
-          IMAGE_REPOSITORY: ${{ steps.image-info.outputs.image_repository }}
+          IMAGE_FRONTEND_REPOSITORY: ${{ steps.frontend-image.outputs.image_frontend_repository }}
+          IMAGE_BACKEND_REPOSITORY: ${{ steps.backend-image.outputs.image_backend_repository }}
           IMAGE_TAG: ${{ steps.git-sha.outputs.sha }}
         run: |
           CREATED_AT=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 
           sed -i \
-            "s|IMAGE_REPOSITORY|$IMAGE_REPOSITORY|g" \
+            "s|IMAGE_FRONTEND_REPOSITORY|$IMAGE_FRONTEND_REPOSITORY|g" \
+            devportal-gitops/source-app/${{ inputs.app_name }}/values.yaml
+          
+          sed -i \
+            "s|IMAGE_BACKEND_REPOSITORY|$IMAGE_BACKEND_REPOSITORY|g" \
             devportal-gitops/source-app/${{ inputs.app_name }}/values.yaml
 
           sed -i \
@@ -157,23 +204,31 @@ jobs:
             devportal-gitops/source-app/${{ inputs.app_name }}/values.yaml
 
           sed -i \
+            "s|FRONTEND_ENABLED|${{ steps.detect-app-type.outputs.frontend_enabled }}|g" \
+            devportal-gitops/source-app/${{ inputs.app_name }}/values.yaml
+          
+          sed -i \
+            "s|BACKEND_ENABLED|${{ steps.detect-app-type.outputs.backend_enabled }}|g" \
+            devportal-gitops/source-app/${{ inputs.app_name }}/values.yaml
+          
+          sed -i \
             "s|APP_NAME|${{ inputs.app_name }}|g" \
+            devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
+
+          sed -i \
+            "s|IMAGE_FRONTEND_REPOSITORY|$IMAGE_FRONTEND_REPOSITORY|g" \
+            devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
+
+          sed -i \
+            "s|IMAGE_BACKEND_REPOSITORY|$IMAGE_BACKEND_REPOSITORY|g" \
             devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
 
           sed -i \
             "s|CREATED_AT|$CREATED_AT|g" \
             devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
-
-          sed -i \
-            "s|APP_NAME|${{ inputs.app_name }}|g" \
-            devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
           
           sed -i \
             "s|REPO_URL|${{ inputs.repo_url }}|g" \
-            devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
-
-          sed -i \
-            "s|IMAGE_REPOSITORY|$IMAGE_REPOSITORY|g" \
             devportal-gitops/source-app/${{ inputs.app_name }}/metadata.json
 
 
@@ -197,7 +252,10 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          git add .
+          git add \
+            source-app/${{ inputs.app_name }}/values.yaml \
+            source-app/${{ inputs.app_name }}/metadata.json
+
 
           git commit -m "Deploy ${{ inputs.app_name }}:${{ steps.git-sha.outputs.sha }}" || exit 0
 
