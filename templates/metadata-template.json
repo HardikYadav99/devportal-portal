@@ -2,7 +2,8 @@
     "appName": "APP_NAME",
     "namespace": "APP_NAME"
     "repoUrl": "REPO_URL",
-    "imageRepository": "IMAGE_REPOSITORY",
+    "imageFrontendRepository": "IMAGE_FRONTEND_REPOSITORY",
+    "imageBackendRepository": "IMAGE_BACKEND_REPOSITORY"
     "createdAt": "CREATED_AT",
     "status": "active"
     "type": "Single"
