@@ -1,21 +1,36 @@
-replicaCount: 1
+appName: APP_NAME
+namespace: APP_NAME
 
-image:
-  repository: IMAGE_REPOSITORY
-  tag: IMAGE_TAG
-  pullPolicy: IfNotPresent
-
-service:
-  type: ClusterIP
+frontend:
+  enabled: FRONTEND_ENABLED
+  replicas: 1
+  image:
+    repository: IMAGE_FRONTEND_REPOSITORY
+    tag: IMAGE_TAG
+    pullPolicy: IfNotPresent
   port: 3000
-
-resources:
-  limits:
-    cpu: 100m
-    memory: 128Mi
-  requests:
-    cpu: 50m
-    memory: 64Mi
-
+  resources:
+    limits:
+      cpu: "100m"
+      memory: "128Mi"
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+  
+backend:
+  enabled: BACKEND_ENABLED
+  replicas: 1
+  image:
+    repository: IMAGE_BACKEND_REPOSITORY
+    tag: IMAGE_TAG
+    pullPolicy: IfNotPresent
+  port: 8000
+  resources:
+    limits:
+      cpu: "200m"
+      memory: "256Mi"
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
 ingress:
   host: APP_NAME.hardikdevportal.duckdns.org
