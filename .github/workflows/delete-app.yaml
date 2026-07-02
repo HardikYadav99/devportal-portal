@@ -125,13 +125,12 @@ jobs:
  
 
       - name: Delete ECR repository
-        env:
         run: |
           aws ecr delete-repository \
             --repository-name ${{ inputs.app_name }}-frontend \
             --region ap-south-1 \
             --force || echo "ECR Frontend Repository not found"
-            
+
           aws ecr delete-repository \
             --repository-name ${{ inputs.app_name }}-backend \
             --region ap-south-1 \
