@@ -125,11 +125,17 @@ jobs:
  
 
       - name: Delete ECR repository
+        env:
         run: |
           aws ecr delete-repository \
-            --repository-name ${{ inputs.app_name }} \
+            --repository-name ${{ inputs.app_name }}-frontend \
             --region ap-south-1 \
-            --force || echo "ECR repository not found"
+            --force || echo "ECR Frontend Repository not found"
+            
+          aws ecr delete-repository \
+            --repository-name ${{ inputs.app_name }}-backend \
+            --region ap-south-1 \
+            --force || echo "ECR Backend Repository Not Found"
 
 
       # Re-enable root selfHeal
